@@ -23,12 +23,8 @@ export const authMiddleware = ({ req }: { req: Request }) => {
   }
 
   try {
-    const { _id, email, username } = jwt.verify(token, secret) as {
-      _id: string;
-      email: string;
-      username: string;
-    };
-    return { user: { _id, email, username } };
+    const decoded = jwt.verify(token, secret) as { _id: string; email: string; username: string };
+    return { user: decoded };
   } catch (err) {
     console.error('Invalid token');
     throw new AuthenticationError('Invalid token');
