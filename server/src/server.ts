@@ -1,21 +1,42 @@
 import express from 'express';
-import path from 'node:path';
-import db from './config/connection.js';
-import routes from './routes/index.js';
+import { ApolloServer } from 'apollo-server-express';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import typeDefs from './schemas/typeDefs.js';
+import resolvers from './schemas/resolvers.js';
+import { authMiddleware } from './services/auth.js';
+
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT ?? 4000;
 
-app.use(express.urlencoded({ extended: true }));
+const server = new ApolloServer({
+  typeDefs,
+  resolvers, // This must be passed correctly
+  context: ({ req }: { req: express.Request }) => authMiddleware({ req }),
+});
+
+
+app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-// if we're in production, serve client/build as static assets
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/build')));
-}
+const startServer = async () => {
+  await server.start();
+  server.applyMiddleware({ app: app as unknown as Parameters<typeof server.applyMiddleware>[0]['app'] });
 
-app.use(routes);
+  await mongoose.connect(process.env.MONGODB_URI ?? 'mongodb://localhost/bookle', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  } as mongoose.ConnectOptions);
 
-db.once('open', () => {
-  app.listen(PORT, () => console.log(`🌍 Now listening on localhost:${PORT}`));
-});
+  mongoose.connection.once('open', () => {
+    console.log('Connected to MongoDB');
+  });
+
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running at http://localhost:${PORT}${server.graphqlPath}`);
+  });
+};
+
+await startServer();
