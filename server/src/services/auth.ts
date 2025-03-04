@@ -1,39 +1,42 @@
-import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { AuthenticationError } from 'apollo-server-express';
+import { Request, Response } from 'express';
 
-import dotenv from 'dotenv';
-dotenv.config();
+const secret = process.env.JWT_SECRET ?? 'yourSuperSecretKey';
+const expiration = '2h';
 
-interface JwtPayload {
-  _id: unknown;
-  username: string;
-  email: string,
+export interface AuthContext {
+  user?: { _id: string; email: string; username: string };
+  req: Request;
+  res: Response;
 }
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
+export const authMiddleware = ({ req }: { req: Request }) => {
+  let token = req.headers.authorization ?? '';
 
-  if (authHeader) {
-    const token = authHeader.split(' ')[1];
+  if (token.startsWith('Bearer ')) {
+    token = token.slice(7, token.length).trim();
+  }
 
-    const secretKey = process.env.JWT_SECRET_KEY || '';
+  if (!token) {
+    return { user: null };
+  }
 
-    jwt.verify(token, secretKey, (err, user) => {
-      if (err) {
-        return res.sendStatus(403); // Forbidden
-      }
-
-      req.user = user as JwtPayload;
-      return next();
-    });
-  } else {
-    res.sendStatus(401); // Unauthorized
+  try {
+    const { _id, email, username } = jwt.verify(token, secret) as {
+      _id: string;
+      email: string;
+      username: string;
+    };
+    return { user: { _id, email, username } };
+  } catch (err) {
+    console.error('Invalid token');
+    throw new AuthenticationError('Invalid token');
   }
 };
 
-export const signToken = (username: string, email: string, _id: unknown) => {
-  const payload = { username, email, _id };
-  const secretKey = process.env.JWT_SECRET_KEY || '';
-
-  return jwt.sign(payload, secretKey, { expiresIn: '1h' });
+export const signToken = (user: { _id: string; email: string; username: string }) => {
+  return jwt.sign({ _id: user._id, email: user.email, username: user.username }, secret, {
+    expiresIn: expiration,
+  });
 };
