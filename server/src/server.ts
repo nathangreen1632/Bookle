@@ -1,42 +1,51 @@
-import express from 'express';
-import { ApolloServer } from 'apollo-server-express';
-import mongoose from 'mongoose';
+import express, { Express } from 'express';
+import path from 'node:path';
+import { expressMiddleware } from '@apollo/server/express4';
+import { fileURLToPath } from 'node:url';
+import type { Request, Response } from 'express';
+import { ApolloServer } from '@apollo/server';
+import { typeDefs, resolvers } from './schemas/index.js';
+import { authenticateToken } from './services/auth.js';
+import { connect } from 'mongoose';
 import dotenv from 'dotenv';
-import typeDefs from './schemas/typeDefs.js';
-import resolvers from './schemas/resolvers.js';
-import { authMiddleware } from './services/auth.js';
 
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT ?? 4000;
-
 const server = new ApolloServer({
   typeDefs,
-  resolvers, // This must be passed correctly
-  context: ({ req }: { req: express.Request }) => authMiddleware({ req }),
+  resolvers,
 });
 
-
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-
-const startServer = async () => {
+const startApolloServer = async () => {
   await server.start();
-  server.applyMiddleware({ app: app as unknown as Parameters<typeof server.applyMiddleware>[0]['app'] });
-
-  await mongoose.connect(process.env.MONGODB_URI ?? 'mongodb://localhost/bookle', {
+  await connect(process.env.MONGODB_URI ?? '', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-  } as mongoose.ConnectOptions);
+  } as any);
 
-  mongoose.connection.once('open', () => {
-    console.log('Connected to MongoDB');
-  });
+  const PORT: number = parseInt(process.env.PORT ?? '4000', 10);
+  const app: Express = express();
 
+  app.use(express.urlencoded({ extended: false }));
+  app.use(express.json());
+
+  app.use('/graphql', expressMiddleware(server, { context: async (args) => authenticateToken(args) }));
+
+  // Serve up static assets
+  if (process.env.NODE_ENV === 'production') {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
+    app.use(express.static(path.join(__dirname, '../../client/dist')));
+
+    app.get('*', (_req: Request, res: Response) => {
+      res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
+    });
+  }
+  // Start the API server
   app.listen(PORT, () => {
-    console.log(`🚀 Server running at http://localhost:${PORT}${server.graphqlPath}`);
+    console.log(`🚀 Server running at http://localhost:${PORT}/graphql`);
   });
 };
 
-await startServer();
+await startApolloServer();
