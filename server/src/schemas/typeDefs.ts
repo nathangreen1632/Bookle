@@ -1,46 +1,47 @@
-import { gql } from 'apollo-server-express';
+//  typeDefs is a string that defines the schema of a GraphQL API.
 
-const typeDefs = gql`
+const typeDefs = `
     type User {
-        _id: ID!
-        username: String!
-        email: String!
+        _id: ID
+        username: String
+        email: String
         bookCount: Int
         savedBooks: [Book]
     }
-
+    input UserInput {
+        username: String
+        email: String
+        password: String
+        savedBooks: [BookInput]
+    }
     type Book {
-        bookId: ID!
+        bookId: String
         authors: [String]
-        title: String!
         description: String
+        title: String
         image: String
         link: String
     }
-
-    type Auth {
-        token: String!
-        user: User!
+    input BookInput {
+        bookId: String
+        authors: [String]
+        description: String
+        title: String
+        image: String
+        link: String
     }
-
     type Query {
         me: User
     }
-
-    input BookInput {
-        bookId: ID!
-        authors: [String]
-        title: String!
-        description: String
-        image: String
-        link: String
-    }
-
     type Mutation {
         login(email: String!, password: String!): Auth
-        addUser(username: String!, email: String!, password: String!): Auth
+        addUser(input: UserInput!): Auth
         saveBook(book: BookInput!): User
-        removeBook(bookId: ID!): User
+        removeBook(bookId: String!): User
+    }
+    type Auth {
+        token: String
+        user: User
     }
 `;
 
