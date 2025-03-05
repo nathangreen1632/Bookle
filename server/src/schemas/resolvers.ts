@@ -1,70 +1,87 @@
-import { AuthenticationError } from 'apollo-server-express';
-import User from '../models/User.js';
-import { signToken } from '../services/auth.js';
-import { GraphQLContext } from '../types/GraphQLContext.js';
+import {BookDocument, User} from '../models/index.js';
+import {AuthenticationError, signToken} from '../services/auth.js';
+
+interface AddUserArgs {
+  input: {
+    username: string;
+    email: string;
+    password: string;
+  };
+}
+
+interface LoginArgs {
+  email: string;
+  password: string;
+}
+
+interface RemoveBookArgs {
+  bookId: string;
+}
+
+interface SaveBookArgs {
+  book: BookDocument;
+}
+
+interface Context {
+  user?: typeof User.prototype;
+}
 
 const resolvers = {
   Query: {
-    me: async (_parent: unknown, _args: unknown, context: GraphQLContext) => {
-      if (context.user) {
-        return User.findById(context.user._id).populate('savedBooks');
+    me: async (_parent: unknown, _args: unknown, context: Context) => {
+      if (!context.user) {
+        throw new AuthenticationError('Not authenticated');
       }
-      throw new AuthenticationError('Not authenticated');
+      return User.findById(context.user.id);
     },
   },
 
   Mutation: {
-    login: async (_parent: unknown, { email, password }: { email: string; password: string }) => {
+    addUser: async (_parent: unknown, { input }: AddUserArgs) => {
+      const existingUser = await User.findOne({ email: input.email });
+      if (existingUser) {
+        throw new AuthenticationError("Email already exists. Please log in.");
+      }
+
+      const user = await User.create({
+        username: input.username,
+        email: input.email,
+        password: input.password,
+      });
+
+      const token = signToken(user.username, user.email, user._id);
+      return { token, user };
+    },
+
+
+    login: async (_parent: unknown, { email, password }: LoginArgs) => {
       const user = await User.findOne({ email });
       if (!user || !(await user.isCorrectPassword(password))) {
         throw new AuthenticationError('Incorrect credentials');
       }
-      const token = signToken({
-        _id: (user._id as string),
-        email: user.email,
-        username: user.username,
-      });
-
+      const token = signToken(user.username, user.email, user._id);
       return { token, user };
     },
 
-    addUser: async (
-      _parent: unknown,
-      { username, email, password }: { username: string; email: string; password: string }
-    ) => {
-      const user = await User.create({ username, email, password });
-      const token = signToken({
-        _id: (user._id as string),
-        email: user.email,
-        username: user.username,
-      });
-
-      return { token, user };
-    },
-
-    saveBook: async (
-      _parent: unknown,
-      { book }: { book: { bookId: string; authors?: string[]; title: string; description?: string; image?: string; link?: string } },
-      context: GraphQLContext
-    ) => {
+    saveBook: async (_parent: unknown, { book }: SaveBookArgs, context: Context) => {
       if (!context.user) {
         throw new AuthenticationError('You need to be logged in!');
       }
       return User.findByIdAndUpdate(
-        context.user._id,
-        { $push: { savedBooks: book } },
-        { new: true, runValidators: true }
+        context.user.id,
+        {$addToSet: {savedBooks: book}},
+        {new: true}
       );
     },
 
-    removeBook: async (_parent: unknown, { bookId }: { bookId: string }, context: GraphQLContext) => {
+    removeBook: async (_parent: unknown, { bookId }: RemoveBookArgs, context: Context) => {
       if (!context.user) {
         throw new AuthenticationError('You need to be logged in!');
       }
       return User.findByIdAndUpdate(
-        context.user._id,
-        { $pull: { savedBooks: { bookId } } },
-        { new: true }
+        context.user.id,
+        {$pull: {savedBooks: {bookId}}},
+        {new: true}
       );
     },
   },
