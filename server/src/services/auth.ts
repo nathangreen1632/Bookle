@@ -1,38 +1,40 @@
 import jwt from 'jsonwebtoken';
-import { AuthenticationError } from 'apollo-server-express';
-import { Request, Response } from 'express';
+import dotenv from 'dotenv';
+import { GraphQLError } from 'graphql';
 
-const secret = process.env.JWT_SECRET ?? 'yourSuperSecretKey';
-const expiration = '2h';
+dotenv.config();
 
-export interface AuthContext {
-  user?: { _id: string; email: string; username: string };
-  req: Request;
-  res: Response;
-}
+export const authenticateToken = ({ req }: any) => {
+  let token = req.body.token ?? req.query.token ?? req.headers.authorization;
 
-export const authMiddleware = ({ req }: { req: Request }) => {
-  let token = req.headers.authorization ?? '';
-
-  if (token.startsWith('Bearer ')) {
-    token = token.slice(7, token.length).trim();
+  if (req.headers.authorization) {
+    token = token.split(' ').pop().trim();
   }
 
   if (!token) {
-    return { user: null };
+    return req;
   }
 
   try {
-    const decoded = jwt.verify(token, secret) as { _id: string; email: string; username: string };
-    return { user: decoded };
+    const { data }: any = jwt.verify(token, process.env.JWT_SECRET ?? '', { maxAge: '7d' });
+    req.user = data;
   } catch (err) {
-    console.error('Invalid token');
-    throw new AuthenticationError('Invalid token');
+    console.log(err);
   }
+
+  return req;
 };
 
-export const signToken = (user: { _id: string; email: string; username: string }) => {
-  return jwt.sign({ _id: user._id, email: user.email, username: user.username }, secret, {
-    expiresIn: expiration,
-  });
+export const signToken = (username: string, email: string, _id: unknown) => {
+  const payload = { username, email, _id };
+  const secretKey: any = process.env.JWT_SECRET;
+
+  return jwt.sign({ data: payload }, secretKey, { expiresIn: '7d' });
 };
+
+export class AuthenticationError extends GraphQLError {
+  constructor(message: string) {
+    super(message, { path: ['Unauthenticated'] });
+    Object.defineProperty(this, 'name', { value: 'AuthenticationError' });
+  }
+}
