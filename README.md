@@ -151,7 +151,7 @@ npm run dev
 
 View the app in your browser.
 
-Frontend: http://localhost:5173/  
+Frontend: http://localhost:4000/  
 GraphQL Playground: http://localhost:4000/graphql
 
 ## Future Improvements
@@ -178,7 +178,7 @@ Nathan Green
 
 Full-Stack Developer
 
-LinkedIn: https://www.linkedin.com/in/nathan-green1632
+LinkedIn: https://www.linkedin.com/in/jgreen1632
 
 GitHub: https://github.com/nathangreen1632
 
@@ -189,5 +189,3 @@ Google Books API
 Apollo GraphQL
 
 MongoDB
-
-UTSA Full-Stack Coding Bootcamp  
