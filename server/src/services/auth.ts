@@ -1,33 +1,50 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { GraphQLError } from 'graphql';
+import { ContextFunction } from '@apollo/server';
+import { ExpressContextFunctionArgument } from '@apollo/server/express4';
 
 dotenv.config();
 
-export const authenticateToken = ({ req }: any) => {
-  let token = req.body.token ?? req.query.token ?? req.headers.authorization;
+interface JwtPayload {
+  data: {
+    _id: string;
+    username: string;
+    email: string;
+  };
+}
 
-  if (req.headers.authorization) {
-    token = token.split(' ').pop().trim();
-  }
+export interface AuthContext {
+  user: {
+    _id: string;
+    username: string;
+    email: string;
+  } | null;
+}
+
+export const authenticateToken: ContextFunction<[ExpressContextFunctionArgument], AuthContext> = async ({ req }) => {
+  const authHeader = req.headers.authorization ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
 
   if (!token) {
-    return req;
+    return { user: null };
   }
 
   try {
-    const { data }: any = jwt.verify(token, process.env.JWT_SECRET ?? '', { maxAge: '7d' });
-    req.user = data;
-  } catch (err) {
-    console.log(err);
-  }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET ?? '', {
+      maxAge: '7d',
+    }) as JwtPayload;
 
-  return req;
+    return { user: decoded.data };
+  } catch (err) {
+    console.error('Invalid token:', err);
+    return { user: null };
+  }
 };
 
-export const signToken = (username: string, email: string, _id: unknown) => {
+export const signToken = (username: string, email: string, _id: unknown): string => {
   const payload = { username, email, _id };
-  const secretKey: any = process.env.JWT_SECRET;
+  const secretKey = process.env.JWT_SECRET ?? '';
 
   return jwt.sign({ data: payload }, secretKey, { expiresIn: '7d' });
 };
