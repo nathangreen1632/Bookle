@@ -4,7 +4,11 @@ export interface GoogleAPIBook {
     title: string;
     authors?: string[];
     description?: string;
-    imageLinks?: { thumbnail: string };
+    imageLinks?: {
+      medium: string;
+      large: string;
+      extraLarge: string;
+      thumbnail: string };
     infoLink?: string;
   };
 }
