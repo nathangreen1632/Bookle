@@ -28,12 +28,55 @@ const LoginForm = () => {
   };
 
   return (
-    <form onSubmit={handleFormSubmit}>
-      <input type="email" name="email" placeholder="Email" value={formState.email} onChange={handleChange} required />
-      <input type="password" name="password" placeholder="Password" value={formState.password} onChange={handleChange} required />
-      <button type="submit">Login</button>
-      {error && <p>Error logging in</p>}
-    </form>
+    <div className="container d-flex justify-content-center align-items-center vh-100">
+      <div className="card p-4" style={{ maxWidth: "400px", width: "100%" }}>
+        <h2 className="text-center mb-4">Login</h2>
+
+        <form onSubmit={handleFormSubmit}>
+          <div className="mb-3">
+            <label htmlFor="email" className="form-label">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              className="form-control"
+              placeholder="Enter your email"
+              value={formState.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="password" className="form-label">
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              className="form-control"
+              placeholder="Enter your password"
+              value={formState.password}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <button type="submit" className="btn btn-primary w-100">
+            Login
+          </button>
+
+          {error && (
+            <div className="alert alert-danger mt-3" role="alert">
+              Error logging in. Please try again.
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
   );
 };
 
