@@ -1,21 +1,21 @@
 class AuthService {
-  getToken() {
+  getToken(): string | null {
     return localStorage.getItem("id_token");
   }
 
-  loggedIn() {
+  loggedIn(): boolean {
     const token = this.getToken();
-    return token ? true : false;
+    return Boolean(token);
   }
 
-  login(token: string) {
+  login(token: string): void {
     localStorage.setItem("id_token", token);
-    window.location.assign("/");
+    window.location.replace("/");
   }
 
-  logout() {
+  logout(): void {
     localStorage.removeItem("id_token");
-    window.location.assign("/");
+    window.location.replace("/");
   }
 }
 
