@@ -1,5 +1,3 @@
-//  typeDefs is a string that defines the schema of a GraphQL API.
-
 const typeDefs = `
     type User {
         _id: ID
@@ -34,10 +32,10 @@ const typeDefs = `
         me: User
     }
     type Mutation {
-        login(email: String!, password: String!): Auth
-        addUser(input: UserInput!): Auth
-        saveBook(book: BookInput!): User
-        removeBook(bookId: String!): User
+    login(email: String!, password: String!): Auth
+    addUser(username: String!, email: String!, password: String!): Auth
+    saveBook(book: BookInput!): User
+    removeBook(bookId: String!): User
     }
     type Auth {
         token: String
